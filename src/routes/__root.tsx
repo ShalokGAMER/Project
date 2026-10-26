@@ -15,6 +15,9 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Toaster } from "@/components/ui/sonner";
+import { useSWRegistration } from "@/hooks/use-sw-registration";
+import { Button } from "@/components/ui/button";
+import { Download, X, Smartphone } from "lucide-react";
 
 function NotFoundComponent() {
   return (
@@ -80,8 +83,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { name: "theme-color", content: "#166534" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#166534", media: "(prefers-color-scheme: light)" },
+      { name: "theme-color", content: "#22c55e", media: "(prefers-color-scheme: dark)" },
+      // Web App Manifest
+      { name: "application-name", content: "CommunityGuardian" },
+      // iOS PWA meta
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "Guardian" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -92,6 +102,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
+      { rel: "icon", type: "image/png", sizes: "512x512", href: "/icon-512.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -116,6 +130,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { isOffline, showInstallPrompt, installApp, dismissInstallPrompt } = useSWRegistration();
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -127,6 +142,43 @@ function RootComponent() {
         </main>
         <Footer />
       </div>
+
+      {/* Offline indicator */}
+      {isOffline && (
+        <div className="offline-banner pb-safe" role="alert" aria-live="assertive">
+          You're offline. Some features may be limited.
+        </div>
+      )}
+
+      {/* Install prompt (Android/Chrome/Edge) */}
+      {showInstallPrompt && (
+        <div className="install-prompt pb-safe" role="dialog" aria-label="Install CommunityGuardian">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Smartphone className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-foreground">Install CommunityGuardian</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Add to home screen for quick access and offline support.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={dismissInstallPrompt} aria-label="Dismiss">
+                <X className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button size="sm" onClick={installApp} aria-label="Install app">
+                <Download className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                Install
+              </Button>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground text-center">
+            On iOS: use Safari's Share menu → "Add to Home Screen"
+          </p>
+        </div>
+      )}
+
       <Toaster position="top-right" />
     </QueryClientProvider>
   );
